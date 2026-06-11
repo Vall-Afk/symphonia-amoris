@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symphonia Amoris - Sanctum Edition</title>
+    <style>
+        /* ==========================================================================
+           MODUL 1: GOTHIC ARCHITECTURE RESET & BASE VARIABLES
+           ========================================================================== */
+        :root {
+            --abyss-black: #030102;
+            --cathedral-stone: #1a1516;
+            --blood-wine: #4a040d;
+            --holy-gold: #c9a759;
+            --dim-gold: #735e2c;
+            --parchment: #d4ccb6;
+            --shadow-deep: rgba(0, 0, 0, 0.95);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--abyss-black);
+            font-family: 'Georgia', 'Times New Roman', serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--parchment);
+            perspective: 1000px; /* Untuk efek kedalaman 3D */
+        }
+
+        /* ==========================================================================
+           MODUL 2: CANVAS RENDERING LAYER (BACKGROUND)
+           ========================================================================== */
+        #gothic-engine {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            filter: blur(0.5px); /* Memberikan kesan lensa kamera kuno */
+        }
+
+        /* Vignette Overlay untuk memusatkan cahaya */
+        .vignette-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 40%, transparent 20%, var(--shadow-deep) 85%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* ==========================================================================
+           MODUL 3: THE MONOLITH (MAIN CONTAINER)
+           ========================================================================== */
+        .sanctum-monolith {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 550px;
+            background: rgba(10, 5, 6, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(201, 167, 89, 0.15);
+            border-top: 2px solid var(--dim-gold);
+            border-radius: 15px 15px 5px 5px;
+            padding: 50px 45px;
+            box-shadow: 
+                0 40px 100px rgba(0, 0, 0, 1),
+                inset 0 0 50px rgba(0, 0, 0, 0.8),
+                0 -2px 20px rgba(201, 167, 89, 0.1);
+            transform: translateY(20px);
+            opacity: 0;
+            transition: opacity 2s ease, transform 2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .sanctum-monolith.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Dekorasi Sudut Monolit (Ornamen Besi Tempa) */
+        .monolith-corner {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 1px solid var(--dim-gold);
+            opacity: 0.5;
+        }
+        .corner-tl { top: 15px; left: 15px; border-right: none; border-bottom: none; }
+        .corner-tr { top: 15px; right: 15px; border-left: none; border-bottom: none; }
+        .corner-bl { bottom: 15px; left: 15px; border-right: none; border-top: none; }
+        .corner-br { bottom: 15px; right: 15px; border-left: none; border-top: none; }
+
+        /* ==========================================================================
+           MODUL 4: INTERACTIVE GATE (LOGIC UI)
+           ========================================================================== */
+        #gate-ui {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .liturgy-title {
+            color: var(--holy-gold);
+            font-size: 1.4rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            text-shadow: 0 0 15px rgba(201, 167, 89, 0.3);
+        }
+
+        .liturgy-subtitle {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: #968c7a;
+            margin-bottom: 45px;
+            font-style: italic;
+        }
+
+        .btn-matrix {
+            display: flex;
+            gap: 20px;
+            position: relative;
+            width: 100%;
+            justify-content: center;
+            height: 50px;
+        }
+
+        .btn-gothic {
+            background: transparent;
+            color: var(--holy-gold);
+            border: 1px solid var(--dim-gold);
+            padding: 12px 30px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-gothic::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(201, 167, 89, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-gothic:hover::before {
+            left: 100%;
+        }
+
+        .btn-gothic:hover {
+            background: rgba(201, 167, 89, 0.1);
+            box-shadow: 0 0 20px rgba(201, 167, 89, 0.2);
+        }
+
+        #btn-deny {
+            color: #7a1f28;
+            border-color: #4a040d;
+            position: absolute;
+        }
+
+        /* ==========================================================================
+           MODUL 5: INNER SANCTUM (THE EPISTLE)
+           ========================================================================== */
+        #epistle-ui {
+            display: none;
+            opacity: 0;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Container untuk Render Matematika Jantung */
+        #math-heart-container {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        h1.recipient-name {
+            color: var(--holy-gold);
+            font-size: 1.5rem;
+            font-weight: normal;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(201, 167, 89, 0.2);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .theological-text {
+            font-size: 1.05rem;
+            line-height: 2;
+            text-align: justify;
+            min-height: 250px; /* Alokasi ruang agar tata letak statis saat diketik */
+        }
+
+        .theological-text p {
+            margin-bottom: 15px;
+        }
+
+        .latin-footer {
+            margin-top: 30px;
+            font-size: 1rem;
+            color: var(--holy-gold);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            font-style: italic;
+            opacity: 0;
+            transition: opacity 3s ease;
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="gothic-engine"></canvas>
+    <div class="vignette-overlay"></div>
+
+    <div class="sanctum-monolith" id="core-monolith">
+        <div class="monolith-corner corner-tl"></div>
+        <div class="monolith-corner corner-tr"></div>
+        <div class="monolith-corner corner-bl"></div>
+        <div class="monolith-corner corner-br"></div>
+
+        <div id="gate-ui">
+            <h2 class="liturgy-title">Sit Pax Domini Vobiscum</h2>
+            <p class="liturgy-subtitle">
+                Shei,<br>Di tengah probabilitas dunia yang tak berujung dan bisingnya ruang virtual ini,<br>maukah engkau menetap dalam satu kepastian yang hening?
+            </p>
+            <div class="btn-matrix">
+                <button class="btn-gothic" id="btn-accept" onclick="InitiateSequence()">Aku Bersedia</button>
+                <button class="btn-gothic" id="btn-deny" onmouseover="calculateEvasion()" onclick="calculateEvasion()">Abaikan</button>
+            </div>
+        </div>
+
+        <div id="epistle-ui">
+            <div id="math-heart-container"></div>
+            
+            <h1 class="recipient-name">Ivana Laurensia Zhang</h1>
+            <div class="theological-text" id="typewriter-output"></div>
+            <div class="latin-footer" id="seal-of-truth">Symphonia Amoris</div>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           ENGINE ARCHITECTURE
+           ========================================================================== */
+
+        // Eksekusi awal saat DOM dimuat
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('core-monolith').classList.add('revealed');
+            GraphicsEngine.init();
+        });
+
+        /* ==========================================================================
+           MODUL JAVASCRIPT 1: EVASIVE MATRIX ALGORITHM
+           ========================================================================== */
+        // Menghitung pergeseran koordinat kursor dan mengubah posisi tombol secara deterministik
+        function calculateEvasion() {
+            const btn = document.getElementById('btn-deny');
+            const matrix = document.querySelector('.btn-matrix');
+            
+            const boundX = matrix.clientWidth - btn.clientWidth;
+            const boundY = matrix.clientHeight + 80;
+            
+            // Penggunaan pseudo-random generator untuk koordinat kartesius
+            const shiftX = Math.floor(Math.random() * boundX) - (boundX / 2);
+            const shiftY = Math.floor(Math.random() * boundY) - (boundY / 2);
+            
+            btn.style.transform = `translate(${shiftX}px, ${shiftY}px)`;
+        }
+
+        /* ==========================================================================
+           MODUL JAVASCRIPT 2: STATE MANAGER & TRANSITIONS
+           ========================================================================== */
+        function InitiateSequence() {
+            const gate = document.getElementById('gate-ui');
+            const epistle = document.getElementById('epistle-ui');
+            
+            // Fade out the gate
+            gate.style.transition = "opacity 1s ease";
+            gate.style.opacity = '0';
+            
+            setTimeout(() => {
+                gate.style.display = 'none';
+                epistle.style.display = 'flex';
+                
+                // Mulai render Jantung Parametrik dan sistem Pengetikan
+                ParametricHeart.init();
+                setTimeout(() => {
+                    epistle.style.opacity = '1';
+                    epistle.style.transition = "opacity 1.5s ease";
+                    TypewriterEngine.start();
+                }, 100);
+            }, 1000);
+        }
+
+        /* ==========================================================================
+           MODUL JAVASCRIPT 3: PARAMETRIC HEART RENDERER (MATH BASED)
+           ========================================================================== */
+        // Alih-alih CSS statis, objek hati ini digambar menggunakan persamaan kurva hati murni.
+        const ParametricHeart = {
+            canvas: null,
+            ctx: null,
+            t: 0,
+            init: function() {
+                const container = document.getElementById('math-heart-container');
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = 120;
+                this.canvas.height = 120;
+                container.appendChild(this.canvas);
+                this.ctx = this.canvas.getContext('2d');
+                this.draw();
+            },
+            draw: function() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.save();
+                this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2.5);
+                
+                // Efek Pendaran Ilahi (Aura glow)
+                this.ctx.shadowBlur = 20;
+                this.ctx.shadowColor = "rgba(180, 10, 30, 0.8)";
+                
+                // Oscilator untuk detak (sinusoidal wave)
+                const scale = 2.5 + Math.sin(this.t) * 0.15;
+                this.ctx.scale(scale, -scale); // Invert Y axis untuk orientasi matematika standar
+
+                this.ctx.beginPath();
+                // Menggunakan Persamaan Kurva Hati:
+                // x = 16 * sin^3(theta)
+                // y = 13 * cos(theta) - 5 * cos(2*theta) - 2 * cos(3*theta) - cos(4*theta)
+                for (let theta = 0; theta <= Math.PI * 2; theta += 0.05) {
+                    const x = 16 * Math.pow(Math.sin(theta), 3);
+                    const y = 13 * Math.cos(theta) - 5 * Math.cos(2 * theta) - 2 * Math.cos(3 * theta) - Math.cos(4 * theta);
+                    if (theta === 0) this.ctx.moveTo(x, y);
+                    else this.ctx.lineTo(x, y);
+                }
+                
+                this.ctx.fillStyle = "rgba(138, 3, 3, 0.9)"; // Blood red
+                this.ctx.fill();
+                this.ctx.lineWidth = 0.5;
+                this.ctx.strokeStyle = "rgba(201, 167, 89, 0.8)"; // Gold wireframe outline
+                this.ctx.stroke();
+                
+                this.ctx.restore();
+                this.t += 0.05;
+                requestAnimationFrame(this.draw.bind(this));
+            }
+        };
+
+        /* ==========================================================================
+           MODUL JAVASCRIPT 4: STOCHASTIC PARTICLE ENGINE (HTML5 CANVAS)
+           ========================================================================== */
+        // Menyimulasikan debu katedral dan bias cahaya yang bergerak menggunakan probabilitas
+        const GraphicsEngine = {
+            canvas: null,
+            ctx: null,
+            particles: [],
+            rays: [],
+            w: 0,
+            h: 0,
+            init: function() {
+                this.canvas = document.getElementById('gothic-engine');
+                this.ctx = this.canvas.getContext('2d');
+                this.resize();
+                window.addEventListener('resize', this.resize.bind(this));
+                
+                // Generate Partikel (Distribusi seragam)
+                for (let i = 0; i < 150; i++) {
+                    this.particles.push(new Mote(this.w, this.h));
+                }
+                // Generate Garis Cahaya
+                for (let i = 0; i < 5; i++) {
+                    this.rays.push(new LightRay(this.w, this.h));
+                }
+                this.animate();
+            },
+            resize: function() {
+                this.w = this.canvas.width = window.innerWidth;
+                this.h = this.canvas.height = window.innerHeight;
+            },
+            animate: function() {
+                this.ctx.clearRect(0, 0, this.w, this.h);
+                
+                // Update and draw rays
+                this.rays.forEach(ray => {
+                    ray.update(this.w, this.h);
+                    ray.draw(this.ctx);
+                });
+
+                // Update and draw motes (debu)
+                this.particles.forEach(mote => {
+                    mote.update(this.w, this.h);
+                    mote.draw(this.ctx);
+                });
+                
+                requestAnimationFrame(this.animate.bind(this));
+            }
+        };
+
+        // Class untuk Partikel Debu Katedral
+        class Mote {
+            constructor(w, h) {
+                this.x = Math.random() * w;
+                this.y = Math.random() * h;
+                // Kecepatan vektor (Drift matrix)
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = Math.random() * -0.5 - 0.1; // Selalu melayang ke atas
+                this.size = Math.random() * 2;
+                this.alpha = Math.random() * 0.5;
+            }
+            update(w, h) {
+                this.x += this.vx;
+                this.y += this.vy;
+                // Reset posisi jika keluar batas
+                if (this.y < 0) {
+                    this.y = h;
+                    this.x = Math.random() * w;
+                }
+            }
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(201, 167, 89, ${this.alpha})`;
+                ctx.fill();
+            }
+        }
+
+        // Class untuk Bias Cahaya Vertikal
+        class LightRay {
+            constructor(w, h) {
+                this.x = Math.random() * w;
+                this.width = Math.random() * 100 + 50;
+                this.alpha = Math.random() * 0.05 + 0.01;
+            }
+            update(w, h) {
+                this.x += 0.2;
+                if (this.x > w + this.width) {
+                    this.x = -this.width;
+                }
+            }
+            draw(ctx) {
+                const gradient = ctx.createLinearGradient(this.x, 0, this.x + this.width, 0);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                gradient.addColorStop(0.5, `rgba(201, 167, 89, ${this.alpha})`);
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(this.x, 0, this.width, window.innerHeight);
+            }
+        }
+
+        /* ==========================================================================
+           MODUL JAVASCRIPT 5: LEXICAL TYPEWRITER ENGINE (PARSING)
+           ========================================================================== */
+        // Mesin pengetik ini mendeteksi tag HTML agar formatting tidak rusak saat animasi berjalan.
+        const TypewriterEngine = {
+            container: null,
+            content: [
+                "<p style='font-style: italic; color: #968c7a; font-size: 0.9rem;'>\"Kasih itu sabar; kasih itu bermurah hati. Ia tidak cemburu, ia tidak memegahkan diri dan tidak sombong.\" — 1 Korintus 13:4</p>",
+                "<br>",
+                "<p>Shei, dalam arsitektur katedral kuno, setiap blok batu disusun tidak untuk mencari perhatian, melainkan untuk menahan beban struktur hingga berabad-abad lamanya. Seperti itulah komitmen ini dirancang.</p>",
+                "<p>Cinta bukanlah probabilitas yang dihitung secara matematis atau lonjakan emosi yang rapuh. Ia adalah sebuah aksioma—sebuah pilihan sadar yang dipegang teguh. Kebersamaan kita diukur dari konsistensi ruang komunikasi yang kita bangun dalam sunyi, melampaui batasan layar ini.</p>",
+                "<p>Di tengah derau dan jarak, namamu adalah baris doa yang konstan. Semoga damai yang sama juga menetap untuk menjaga pikiran dan hatimu di sana.</p>"
+            ],
+            paraIndex: 0,
+            charIndex: 0,
+            isTag: false,
+            tagBuffer: '',
+            speed: 35, // Kecepatan ritme ketikan (ms)
+
+            start: function() {
+                this.container = document.getElementById('typewriter-output');
+                this.type();
+            },
+
+            type: function() {
+                if (this.paraIndex < this.content.length) {
+                    const currentString = this.content[this.paraIndex];
+                    
+                    if (this.charIndex < currentString.length) {
+                        const char = currentString.charAt(this.charIndex);
+                        
+                        // Logika Parsing HTML Tag
+                        if (char === '<') this.isTag = true;
+                        
+                        if (this.isTag) {
+                            this.tagBuffer += char;
+                            if (char === '>') {
+                                this.isTag = false;
+                                this.container.innerHTML += this.tagBuffer;
+                                this.tagBuffer = '';
+                            }
+                        } else {
+                            this.container.innerHTML += char;
+                        }
+                        
+                        this.charIndex++;
+                        setTimeout(this.type.bind(this), this.isTag ? 0 : this.speed);
+                    } else {
+                        // Lanjut ke paragraf berikutnya
+                        this.paraIndex++;
+                        this.charIndex = 0;
+                        setTimeout(this.type.bind(this), 600); // Jeda bernapas antar paragraf
+                    }
+                } else {
+                    // Selesai, tampilkan segel penutup
+                    setTimeout(() => {
+                        document.getElementById('seal-of-truth').style.opacity = '1';
+                    }, 1000);
+                }
+            }
+        };
+    </script>
+</body>
+</html>
